@@ -63,7 +63,8 @@ async def send_otp(admin_id: int, phone: str) -> tuple:
     except FloodWaitError as e:
         return False, f"❌ Flood wait. Try again in {e.seconds} seconds."
     except Exception as e:
-        return False, f"❌ Error sending OTP: {e}"
+        logger.error(f"send_otp error for {phone}: {type(e).__name__}: {e}")
+        return False, f"❌ Error sending OTP: <code>{type(e).__name__}: {e}</code>"
 
 
 async def verify_otp(admin_id: int, code: str) -> tuple:
@@ -170,11 +171,15 @@ async def start_otp_listener(bot, buyer_id: int, phone: str, session_string: str
                     # Deduct payment and finalize
                     finalized = db.finalize_purchase(buyer_id)
                     if finalized:
-                        new_balance = db.get_balance(buyer_id)
+                        import price_feed
+                        new_balance      = db.get_balance(buyer_id)
+                        new_balance_usdt = price_feed.ton_to_usdt(new_balance)
+                        price_usdt       = db.get_price_usdt()
                         bot.send_message(
                             buyer_id,
-                            f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> <b>Payment Deducted</b>\n\n"
-                            f"Remaining Balance: <b>{new_balance:.3f} TON</b>",
+                            f"<tg-emoji emoji-id=\"6107061783988542265\">💲</tg-emoji> <b>Payment Deducted</b>\n\n"
+                            f"💸 Charged: <b>${price_usdt:.2f} USDT</b>\n"
+                            f"Remaining Balance: <b>${new_balance_usdt:.2f} USDT</b>",
                             parse_mode="HTML"
                         )
 
