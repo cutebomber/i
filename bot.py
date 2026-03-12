@@ -35,12 +35,13 @@ EMOJI_IDS = {
     "🏪": "6107212468621154692",   # shop
     "💎": "6107289979895945232",   # fragment logo
     "🪙": "6106898347598027963",   # toncoin
-    "💲": "6107061783988542265",   # dollar
+    "💲": "5992430854909989581",   # dollar
     "📈": "6104943961384688402",   # graph
     "🏠": "6008258140108231117",   # main menu
     "⏱": "5900104897885376843",    # timer/clock
     "☑️": "5951665890079544884",    # verified check
-    "💳": "6107061783988542265",   # card (uses dollar custom emoji)
+    "💳": "5255713220546538619",   # card
+    "👛": "6161281300809391112",   # wallet
 }
 
 def build(text: str):
@@ -319,8 +320,8 @@ def add_balance(message):
     balance_usdt = price_feed.ton_to_usdt(balance_ton)
     send(
         uid,
-        f"[E:🎁] **Add Balance**\n\n"
-        f"[E:💳] Your balance: **${balance_usdt:.2f} USDT**\n"
+        f"[E:👛] **Add Balance**\n\n"
+        f"[E:👛] Your balance: **${balance_usdt:.2f} USDT**\n"
         f"[E:💲] Account price: **${price_usdt:.2f} USDT**\n\n"
         f"Choose which coin to pay with:",
         reply_markup=add_balance_choose_kb()
@@ -341,8 +342,8 @@ def topup_cb(call):
         balance_usdt = price_feed.ton_to_usdt(balance_ton)
         edit(
             call.message.chat.id, call.message.message_id,
-            f"[E:🎁] **Add Balance**\n\n"
-            f"[E:💳] Your balance: **${balance_usdt:.2f} USDT**\n"
+            f"[E:👛] **Add Balance**\n\n"
+            f"[E:👛] Your balance: **${balance_usdt:.2f} USDT**\n"
             f"[E:💲] Account price: **${price_usdt:.2f} USDT**\n\n"
             f"Choose which coin to pay with:",
             reply_markup=add_balance_choose_kb()
