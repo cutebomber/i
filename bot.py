@@ -603,13 +603,46 @@ def all_users(message):
 def add_account_start(message):
     if message.from_user.id != ADMIN_ID:
         return
-    set_state(message.from_user.id, "enter_phone")
+    kb = types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton("📱 Phone + OTP",        callback_data="addacc_phone"))
+    kb.add(types.InlineKeyboardButton("📋 Paste Session String", callback_data="addacc_session"))
     send(message.chat.id,
-        f"[E:💎] **Add Account — Step 1**\n\n"
-        f"Send the **phone number** to add.\n"
-        f"Include country code. Example: +14155552671\n\n"
-        f"Send /cancel to abort."
+        f"[E:💎] **Add Account**\n\n"
+        f"Choose how to add the account:",
+        reply_markup=kb
     )
+
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith("addacc_"))
+def addacc_method_cb(call):
+    if call.from_user.id != ADMIN_ID:
+        bot.answer_callback_query(call.id)
+        return
+    uid = call.from_user.id
+    method = call.data.split("_")[1]
+
+    if method == "phone":
+        set_state(uid, "enter_phone")
+        bot.edit_message_text(
+            "📱 <b>Add Account — Phone + OTP</b>\n\n"
+            "Send the phone number (with country code).\n"
+            "Example: <code>+14155552671</code>\n\n"
+            "Send /cancel to abort.",
+            call.message.chat.id, call.message.message_id,
+            parse_mode="HTML"
+        )
+    elif method == "session":
+        set_state(uid, "enter_session")
+        bot.edit_message_text(
+            "📋 <b>Add Account — Session String</b>\n\n"
+            "Run <code>gen_session.py</code> on your PC to generate a session string.\n\n"
+            "Then paste the session string here.\n"
+            "It starts with <code>1BVts...</code> or similar.\n\n"
+            "Send /cancel to abort.",
+            call.message.chat.id, call.message.message_id,
+            parse_mode="HTML"
+        )
+    bot.answer_callback_query(call.id)
 
 
 # ─────────────── CHANGE PRICE ─────────────────────────
@@ -804,6 +837,32 @@ def handle_text(message):
         ok, msg = run_async(session_manager.send_otp(uid, text))
         set_state(uid, "enter_otp") if ok else clear_state(uid)
         bot.send_message(message.chat.id, msg)
+
+    elif state == "enter_session" and uid == ADMIN_ID:
+        # Format: session_string or phone|session_string
+        session_string = text.strip()
+        phone = f"session_{int(__import__('time').time())}"
+
+        # Allow "phone|session" format for proper phone labeling
+        if "|" in session_string and len(session_string.split("|")[0]) < 20:
+            parts = session_string.split("|", 1)
+            phone = parts[0].strip()
+            session_string = parts[1].strip()
+
+        if len(session_string) < 100:
+            send(message.chat.id, f"[E:⚠️] Invalid session string — must be 300+ characters.\n\nFormat: <code>session_string</code>\nOr with phone: <code>+1234567890|session_string</code>")
+            return
+        try:
+            db.save_account(phone, "", session_string)
+            clear_state(uid)
+            send(message.chat.id,
+                f"[E:✅] **Session saved!**\n\n"
+                f"📱 Phone/ID: <code>{phone}</code>\n"
+                f"[E:🏪] Account added to stock and ready for buyers.",
+                reply_markup=admin_menu()
+            )
+        except Exception as e:
+            send(message.chat.id, f"[E:⚠️] Error saving session: {e}")
 
     elif state == "enter_otp" and uid == ADMIN_ID:
         code = text.replace(" ", "")
