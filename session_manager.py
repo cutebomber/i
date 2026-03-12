@@ -53,17 +53,30 @@ async def send_otp(admin_id: int, phone: str) -> tuple:
     try:
         client = TelegramClient(StringSession(), API_ID, API_HASH)
         await client.connect()
-        result = await client.send_code_request(phone)
+
+        # Check if already authorized (leftover session)
+        if await client.is_user_authorized():
+            await client.log_out()
+            await client.disconnect()
+            client = TelegramClient(StringSession(), API_ID, API_HASH)
+            await client.connect()
+
+        result = await client.send_code_request(phone, force_sms=True)
         pending_logins[admin_id] = {
             "phone": phone,
             "client": client,
             "phone_code_hash": result.phone_code_hash,
         }
-        return True, f"✅ OTP sent to <code>{phone}</code>\n\nNow send me the OTP code you received on that number."
+        return True, (
+            f"✅ OTP sent to <code>{phone}</code>\n\n"
+            f"📱 Check the phone's <b>SMS</b> or <b>Telegram app</b> for the code.\n\n"
+            f"Now send me the OTP code."
+        )
     except FloodWaitError as e:
-        return False, f"❌ Flood wait. Try again in {e.seconds} seconds."
+        return False, f"❌ Flood wait. Telegram is rate-limiting this number. Try again in <b>{e.seconds} seconds</b>."
     except Exception as e:
-        return False, f"❌ Error sending OTP: {e}"
+        logger.error(f"send_otp error for {phone}: {type(e).__name__}: {e}")
+        return False, f"❌ Error sending OTP: <code>{type(e).__name__}: {e}</code>"
 
 
 async def verify_otp(admin_id: int, code: str) -> tuple:
