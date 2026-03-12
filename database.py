@@ -63,6 +63,8 @@ def init_db():
         );
     """)
     cur.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('price_usdt', '5.0')")
+    # Migration: if price_usdt was never set properly (e.g. old DB), force it to 5.0
+    cur.execute("UPDATE settings SET value = '5.0' WHERE key = 'price_usdt' AND CAST(value AS REAL) < 1.0")
     con.commit()
     con.close()
 
