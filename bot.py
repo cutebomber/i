@@ -40,6 +40,7 @@ EMOJI_IDS = {
     "🏠": "6008258140108231117",   # main menu
     "⏱": "5900104897885376843",    # timer/clock
     "☑️": "5951665890079544884",    # verified check
+    "💳": "6107061783988542265",   # card (uses dollar custom emoji)
 }
 
 def build(text: str):
@@ -316,13 +317,12 @@ def add_balance(message):
     price_usdt   = db.get_price_usdt()
     balance_ton  = db.get_balance(uid)
     balance_usdt = price_feed.ton_to_usdt(balance_ton)
-    bot.send_message(
+    send(
         uid,
-        f"💰 <b>Add Balance</b>\n\n"
-        f"💳 Your balance: <b>${balance_usdt:.2f} USDT</b>\n"
-        f"💲 Account price: <b>${price_usdt:.2f} USDT</b>\n\n"
+        f"[E:🎁] **Add Balance**\n\n"
+        f"[E:💳] Your balance: **${balance_usdt:.2f} USDT**\n"
+        f"[E:💲] Account price: **${price_usdt:.2f} USDT**\n\n"
         f"Choose which coin to pay with:",
-        parse_mode="HTML",
         reply_markup=add_balance_choose_kb()
     )
 
@@ -339,13 +339,13 @@ def topup_cb(call):
         price_usdt   = db.get_price_usdt()
         balance_ton  = db.get_balance(uid)
         balance_usdt = price_feed.ton_to_usdt(balance_ton)
-        bot.edit_message_text(
-            f"💰 <b>Add Balance</b>\n\n"
-            f"💳 Your balance: <b>${balance_usdt:.2f} USDT</b>\n"
-            f"💲 Account price: <b>${price_usdt:.2f} USDT</b>\n\n"
-            f"Choose which coin to pay with:",
+        edit(
             call.message.chat.id, call.message.message_id,
-            parse_mode="HTML", reply_markup=add_balance_choose_kb()
+            f"[E:🎁] **Add Balance**\n\n"
+            f"[E:💳] Your balance: **${balance_usdt:.2f} USDT**\n"
+            f"[E:💲] Account price: **${price_usdt:.2f} USDT**\n\n"
+            f"Choose which coin to pay with:",
+            reply_markup=add_balance_choose_kb()
         )
         bot.answer_callback_query(call.id)
         return
@@ -354,14 +354,13 @@ def topup_cb(call):
     if val == "tonkeeper":
         ton_rate = price_feed.get_ton_price_usdt()
         set_state(uid, "topup_ton")
-        bot.edit_message_text(
-            f"💎 <b>Pay with TON (Tonkeeper)</b>\n\n"
+        edit(
+            call.message.chat.id, call.message.message_id,
+            f"[E:💎] **Pay with Tonkeeper**\n\n"
             f"How much USDT do you want to deposit?\n"
             f"We'll convert it to TON at the live rate.\n\n"
-            f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> Live rate: <b>1 TON = ${ton_rate:.4f} USDT</b>\n\n"
-            f"Type the USDT amount. Example: <code>5</code>",
-            call.message.chat.id, call.message.message_id,
-            parse_mode="HTML",
+            f"[E:🪙] Live rate: **1 TON = ${ton_rate:.4f} USDT**\n\n"
+            f"Type the USDT amount. Example: **5**",
             reply_markup=types.InlineKeyboardMarkup().add(
                 types.InlineKeyboardButton("🔙 Back", callback_data="topup_back")
             )
@@ -372,13 +371,12 @@ def topup_cb(call):
     # ── USDT via OxaPay — ask USDT amount ─────────────
     if val == "oxapay":
         set_state(uid, "topup_oxapay")
-        bot.edit_message_text(
-            f"💵 <b>Pay with USDT (OxaPay)</b>\n\n"
-            f"How much USDT do you want to deposit?\n\n"
-            f"Type the USDT amount. Example: <code>5</code>\n\n"
-            f"<i>Supports USDT, BTC, ETH, card & more.</i>",
+        edit(
             call.message.chat.id, call.message.message_id,
-            parse_mode="HTML",
+            f"[E:💲] **Pay with OxaPay**\n\n"
+            f"How much USDT do you want to deposit?\n\n"
+            f"Type the USDT amount. Example: **5**\n\n"
+            f"[E:☑️] Supports USDT, BTC, ETH, card & more.",
             reply_markup=types.InlineKeyboardMarkup().add(
                 types.InlineKeyboardButton("🔙 Back", callback_data="topup_back")
             )
