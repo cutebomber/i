@@ -835,25 +835,57 @@ def handle_text(message):
         bot.send_message(message.chat.id, msg)
 
     elif state == "enter_session" and uid == ADMIN_ID:
-        # Format: session_string or phone|session_string
-        session_string = text.strip()
+        raw = text.strip()
         phone = f"session_{int(__import__('time').time())}"
+        session_string = raw
+        prefilled_2fa  = None
 
-        # Allow "phone|session" format for proper phone labeling
-        if "|" in session_string and len(session_string.split("|")[0]) < 20:
-            parts = session_string.split("|", 1)
-            phone = parts[0].strip()
+        # Format: phone|session or phone|session|2fa
+        parts = raw.split("|")
+        if len(parts) >= 2 and len(parts[0]) < 20:
+            phone          = parts[0].strip()
             session_string = parts[1].strip()
+            if len(parts) >= 3:
+                prefilled_2fa = parts[2].strip()
 
         if len(session_string) < 100:
-            send(message.chat.id, f"[E:⚠️] Invalid session string — must be 300+ characters.\n\nFormat: <code>session_string</code>\nOr with phone: <code>+1234567890|session_string</code>")
+            send(message.chat.id, f"[E:⚠️] Invalid session string — must be 300+ characters.\n\nFormat: `session_string`\nOr: `+1234567890|session_string`\nOr with 2FA: `+1234567890|session_string|2fa_password`")
             return
         try:
-            db.save_account(phone, "", session_string)
+            if prefilled_2fa is not None:
+                # 2FA already provided — save directly
+                db.save_account(phone, prefilled_2fa, session_string)
+                clear_state(uid)
+                send(message.chat.id,
+                    f"[E:✅] **Account saved!**\n\n"
+                    f"📱 Phone: `{phone}`\n"
+                    f"[E:🔒] 2FA: `{prefilled_2fa}`\n\n"
+                    f"[E:🏪] Account added to stock and ready for buyers.",
+                    reply_markup=admin_menu()
+                )
+            else:
+                # Ask for 2FA
+                set_state(uid, "enter_session_2fa", data={"phone": phone, "session": session_string})
+                send(message.chat.id,
+                    f"[E:🔒] **Does this account have a 2FA password?**\n\n"
+                    f"Send the 2FA password, or send **none** if there is no 2FA."
+                )
+        except Exception as e:
+            send(message.chat.id, f"[E:⚠️] Error: {e}")
+
+    elif state == "enter_session_2fa" and uid == ADMIN_ID:
+        saved_data = get_state_data(uid)
+        phone          = saved_data["phone"]
+        session_string = saved_data["session"]
+        password_2fa   = "" if text.strip().lower() == "none" else text.strip()
+        try:
+            db.save_account(phone, password_2fa, session_string)
             clear_state(uid)
+            has_2fa = f"🔒 2FA: `{password_2fa}`" if password_2fa else "🔓 No 2FA"
             send(message.chat.id,
-                f"[E:✅] **Session saved!**\n\n"
-                f"📱 Phone/ID: <code>{phone}</code>\n"
+                f"[E:✅] **Account saved!**\n\n"
+                f"📱 Phone/ID: `{phone}`\n"
+                f"{has_2fa}\n\n"
                 f"[E:🏪] Account added to stock and ready for buyers.",
                 reply_markup=admin_menu()
             )
