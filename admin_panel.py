@@ -156,16 +156,16 @@ def dashboard():
     total_users   = q("SELECT COUNT(*) as c FROM users", one=True)["c"]
     total_stock   = q("SELECT COUNT(*) as c FROM accounts WHERE status='available'", one=True)["c"]
     total_sold    = q("SELECT COUNT(*) as c FROM accounts WHERE status='sold'", one=True)["c"]
-    rev_row       = q("SELECT SUM(amount) as s FROM transactions WHERE type='purchase'", one=True)
+    rev_row       = q("SELECT SUM(amount_ton) as s FROM transactions WHERE type='purchase'", one=True)
     total_rev     = float(rev_row["s"] or 0)
     price_row     = q("SELECT value FROM settings WHERE key='price_usdt'", one=True)
     price_usdt    = float(price_row["value"]) if price_row else 5.0
     recent_orders = q("""SELECT t.*,u.username FROM transactions t
-        LEFT JOIN users u ON t.telegram_id=u.telegram_id
+        LEFT JOIN users u ON t.user_id=u.telegram_id
         WHERE t.type='purchase' ORDER BY t.created_at DESC LIMIT 10""")
     rows = "".join(f"""<tr>
-        <td>{"@"+r["username"] if r["username"] else r["telegram_id"]}</td>
-        <td class="mono">{float(r["amount"] or 0):.4f} TON</td>
+        <td>{"@"+r["username"] if r["username"] else r["user_id"]}</td>
+        <td class="mono">{float(r["amount_ton"] or 0):.4f} TON</td>
         <td class="mono" style="color:var(--muted);font-size:11px">{r["created_at"] or "—"}</td>
         <td><span class="badge bg">Completed</span></td>
     </tr>""" for r in recent_orders) or '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px">No orders yet</td></tr>'
@@ -256,7 +256,7 @@ def stock_delete(aid):
 @login_required
 def users():
     all_users = q("""SELECT u.*,COUNT(t.id) as pc FROM users u
-        LEFT JOIN transactions t ON t.telegram_id=u.telegram_id AND t.type='purchase'
+        LEFT JOIN transactions t ON t.user_id=u.telegram_id AND t.type='purchase'
         GROUP BY u.telegram_id ORDER BY u.created_at DESC""")
     rows = "".join(f"""<tr>
         <td class="mono">{u["telegram_id"]}</td>
@@ -315,13 +315,13 @@ def users_credit():
 @login_required
 def orders():
     all_orders = q("""SELECT t.*,u.username FROM transactions t
-        LEFT JOIN users u ON t.telegram_id=u.telegram_id ORDER BY t.created_at DESC LIMIT 200""")
+        LEFT JOIN users u ON t.user_id=u.telegram_id ORDER BY t.created_at DESC LIMIT 200""")
     rows = "".join(f"""<tr>
         <td class="mono" style="color:var(--muted)">{o["id"]}</td>
-        <td>{"@"+o["username"] if o["username"] else o["telegram_id"]}</td>
+        <td>{"@"+o["username"] if o["username"] else o["user_id"]}</td>
         <td><span class="badge {"br" if o["type"]=="purchase" else "bg"}">{o["type"].title()}</span></td>
         <td class="mono" style="color:{"var(--danger)" if o["type"]=="purchase" else "var(--accent2)"}">
-          {"−" if o["type"]=="purchase" else "+"}{float(o["amount"] or 0):.4f} TON</td>
+          {"−" if o["type"]=="purchase" else "+"}{float(o["amount_ton"] or 0):.4f} TON</td>
         <td class="mono" style="font-size:11px;color:var(--muted)">{o["created_at"] or "—"}</td>
     </tr>""" for o in all_orders) or '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">No transactions yet</td></tr>'
     content = f"""{flash_html()}
