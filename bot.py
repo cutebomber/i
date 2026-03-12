@@ -279,13 +279,12 @@ def cmd_start(message):
     uid        = message.from_user.id
     db.add_user(uid, message.from_user.username or "")
     name       = message.from_user.first_name or "User"
-    price_ton  = db.get_price_ton()
-    price_usdt = price_feed.ton_to_usdt(price_ton)
+    price_usdt = db.get_price_usdt()
     send(uid,
         f"[E:👋] **Welcome, {name}!**\n\n"
         f"[E:🏠] **Fragment Account Shop**\n"
         f"[E:💎] Buy verified Telegram Fragment accounts instantly.\n\n"
-        f"[E:💲] Price: **${price_usdt:.2f} USDT** ({price_ton} TON)\n"
+        f"[E:💲] Price: **${price_usdt:.2f} USDT**\n"
         f"[E:☑️] Instant delivery after payment\n"
         f"[E:🔒] Safe & automated",
         reply_markup=main_menu(uid)
