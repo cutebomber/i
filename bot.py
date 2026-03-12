@@ -517,14 +517,12 @@ def my_profile(message):
     balance_usdt = price_feed.ton_to_usdt(balance_ton)
     purchases    = db.get_user_purchase_count(uid)
     price_usdt   = db.get_price_usdt()
-    ton_rate     = price_feed.get_ton_price_usdt()
     send(uid,
         f"[E:👤] **Your Profile**\n\n"
         f"[E:🤖] Telegram ID: {uid}\n"
         f"[E:💲] Balance: **${balance_usdt:.2f} USDT**\n"
         f"[E:📈] Total Purchases: **{purchases}**\n"
-        f"[E:💲] Account Price: **${price_usdt:.2f} USDT**\n"
-        f"[E:🪙] TON Rate: **1 TON = ${ton_rate:.4f} USDT**"
+        f"[E:💲] Account Price: **${price_usdt:.2f} USDT**"
     )
 
 
