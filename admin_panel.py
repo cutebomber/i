@@ -101,7 +101,7 @@ def layout(content, page):
         ("settings",  "⚙️",  "Settings"),
     ]
     nav_html = "".join(
-        f'<a href="/{p}" class="{"active" if p==page}"><span>{icon}</span> {label}</a>'
+        '<a href="/{}" class="{}"><span>{}</span> {}</a>'.format(p, "active" if p==page else "", icon, label)
         for p, icon, label in nav_items
     )
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
