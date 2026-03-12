@@ -228,9 +228,9 @@ def account_action_kb(account_id: int, page: int = 0):
 def price_quick_kb():
     m = types.InlineKeyboardMarkup(row_width=3)
     m.add(
-        types.InlineKeyboardButton("🔥 Sale: 0.05", callback_data="qprice_0.05"),
-        types.InlineKeyboardButton("✅ Normal: 0.1", callback_data="qprice_0.1"),
-        types.InlineKeyboardButton("💎 High: 0.5",  callback_data="qprice_0.5"),
+        types.InlineKeyboardButton("🔥 Sale: $3",    callback_data="qprice_3"),
+        types.InlineKeyboardButton("✅ Normal: $5",  callback_data="qprice_5"),
+        types.InlineKeyboardButton("💎 High: $10",   callback_data="qprice_10"),
     )
     m.add(types.InlineKeyboardButton("✏️ Enter Custom Price", callback_data="qprice_custom"))
     return m
@@ -626,11 +626,11 @@ def add_account_start(message):
 def change_price_menu(message):
     if message.from_user.id != ADMIN_ID:
         return
-    price = db.get_price_ton()
+    price_usdt = db.get_price_usdt()
     send(message.chat.id,
         f"[E:💲] **Change Account Price**\n\n"
-        f"[E:🪙] Current price: **{price} TON**\n\n"
-        f"Pick a quick preset or enter a custom price:",
+        f"[E:💲] Current price: **${price_usdt:.2f} USDT**\n\n"
+        f"Pick a quick preset or enter a custom price (in USDT):",
         reply_markup=price_quick_kb()
     )
 
@@ -644,14 +644,14 @@ def quick_price_cb(call):
     if val == "custom":
         set_state(call.from_user.id, "set_price")
         edit(call.message.chat.id, call.message.message_id,
-            f"[E:💲] Send the new price in TON (e.g. 0.25):"
+            f"[E:💲] Send the new price in **USDT** (e.g. 5):"
         )
     else:
         try:
             new_price = float(val)
-            db.set_price_ton(new_price)
+            db.set_price_usdt(new_price)
             edit(call.message.chat.id, call.message.message_id,
-                f"[E:✅] Price updated to **{new_price} TON**"
+                f"[E:✅] Price updated to **${new_price:.2f} USDT**"
             )
         except ValueError:
             bot.answer_callback_query(call.id, "Invalid price", show_alert=True)
@@ -836,14 +836,16 @@ def handle_text(message):
     elif state == "set_price" and uid == ADMIN_ID:
         try:
             new_price = float(text)
-            db.set_price_ton(new_price)
+            if new_price <= 0:
+                raise ValueError
+            db.set_price_usdt(new_price)
             clear_state(uid)
             send(message.chat.id,
-                f"[E:✅] Price updated to **{new_price} TON**",
+                f"[E:✅] Price updated to **${new_price:.2f} USDT**",
                 reply_markup=admin_menu()
             )
         except ValueError:
-            send(message.chat.id, f"[E:⚠️] Invalid. Send a number like 0.25")
+            send(message.chat.id, f"[E:⚠️] Invalid. Send a number like 5")
 
     elif state == "broadcast" and uid == ADMIN_ID:
         clear_state(uid)
