@@ -294,10 +294,9 @@ def cmd_start(message):
 # ─────────────────────── ADD BALANCE ──────────────────
 
 def add_balance_choose_kb():
-    """Two payment options shown as coin choices."""
     m = types.InlineKeyboardMarkup()
-    m.add(types.InlineKeyboardButton("💎 TON  (via Tonkeeper)",      callback_data="topup_tonkeeper"))
-    m.add(types.InlineKeyboardButton("💵 USDT  (via OxaPay)",        callback_data="topup_oxapay"))
+    m.add(types.InlineKeyboardButton("💎 Tonkeeper", callback_data="topup_tonkeeper"))
+    m.add(types.InlineKeyboardButton("💳 OxaPay",   callback_data="topup_oxapay"))
     return m
 
 
