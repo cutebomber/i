@@ -13,7 +13,7 @@ app.secret_key = os.urandom(32)
 
 DB_PATH        = os.path.join(os.path.dirname(__file__), "bot_data.db")
 PANEL_PASSWORD = "admin123"   # ← CHANGE THIS
-PANEL_PORT     = 8080
+PANEL_PORT     = 8081
 
 def get_db():
     con = sqlite3.connect(DB_PATH)
