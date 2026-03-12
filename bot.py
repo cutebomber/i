@@ -313,17 +313,16 @@ def tonkeeper_payment_kb(uid: int, amount_ton: float):
 
 @bot.message_handler(func=lambda m: m.text and "Add Balance" in m.text)
 def add_balance(message):
-    uid        = message.from_user.id
+    uid          = message.from_user.id
     db.add_user(uid, message.from_user.username or "")
-    price_ton  = db.get_price_ton()
-    price_usdt = price_feed.ton_to_usdt(price_ton)
+    price_usdt   = db.get_price_usdt()
     balance_ton  = db.get_balance(uid)
     balance_usdt = price_feed.ton_to_usdt(balance_ton)
     bot.send_message(
         uid,
         f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> <b>Add Balance</b>\n\n"
-        f"💳 Your balance: <b>${balance_usdt:.2f} USDT</b> ({balance_ton:.4f} TON)\n"
-        f"💲 Account price: <b>${price_usdt:.2f} USDT</b> ({price_ton} TON)\n\n"
+        f"💳 Your balance: <b>${balance_usdt:.2f} USDT</b>\n"
+        f"💲 Account price: <b>${price_usdt:.2f} USDT</b>\n\n"
         f"Choose your payment method:\n\n"
         f"💎 <b>Tonkeeper</b> — Pay in TON directly\n"
         f"💳 <b>OxaPay</b> — Pay in USDT via card, crypto & more",
@@ -341,14 +340,13 @@ def topup_cb(call):
 
     # ── Back to method selection ───────────────────────
     if val == "back":
-        price_ton    = db.get_price_ton()
-        price_usdt   = price_feed.ton_to_usdt(price_ton)
+        price_usdt   = db.get_price_usdt()
         balance_ton  = db.get_balance(uid)
         balance_usdt = price_feed.ton_to_usdt(balance_ton)
         bot.edit_message_text(
             f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> <b>Add Balance</b>\n\n"
-            f"💳 Your balance: <b>${balance_usdt:.2f} USDT</b> ({balance_ton:.4f} TON)\n"
-            f"💲 Account price: <b>${price_usdt:.2f} USDT</b> ({price_ton} TON)\n\n"
+            f"💳 Your balance: <b>${balance_usdt:.2f} USDT</b>\n"
+            f"💲 Account price: <b>${price_usdt:.2f} USDT</b>\n\n"
             f"Choose your payment method:\n\n"
             f"💎 <b>Tonkeeper</b> — Pay in TON directly\n"
             f"💳 <b>OxaPay</b> — Pay in USDT via card, crypto & more",
@@ -410,8 +408,8 @@ def buy_account(message):
 
     balance    = db.get_balance(uid)
     stock      = db.get_available_count()
+    price_usdt = db.get_price_usdt()
     price_ton  = db.get_price_ton()
-    price_usdt = price_feed.ton_to_usdt(price_ton)
     bal_usdt   = price_feed.ton_to_usdt(balance)
 
     if stock == 0:
@@ -419,12 +417,11 @@ def buy_account(message):
         return
 
     if balance < price_ton:
-        needed_ton  = price_ton - balance
-        needed_usdt = price_feed.ton_to_usdt(needed_ton)
+        needed_usdt = price_usdt - bal_usdt
         send(uid,
             f"[E:🏪] **Buy Fragment Account**\n\n"
-            f"[E:💲] Price: **${price_usdt:.2f} USDT** ({price_ton} TON)\n"
-            f"[E:🪙] Your Balance: **${bal_usdt:.2f} USDT** ({balance:.4f} TON)\n\n"
+            f"[E:💲] Price: **${price_usdt:.2f} USDT**\n"
+            f"[E:🪙] Your Balance: **${bal_usdt:.2f} USDT**\n\n"
             f"[E:⚠️] Insufficient balance. You need **${needed_usdt:.2f} more USDT**.\n"
             f"Use 💰 Add Balance to top up."
         )
@@ -433,8 +430,8 @@ def buy_account(message):
     send(uid,
         f"[E:🏪] **Buy Fragment Account**\n\n"
         f"[E:💎] Available Stock: **{stock}**\n"
-        f"[E:💲] Price: **${price_usdt:.2f} USDT** ({price_ton} TON)\n"
-        f"[E:🪙] Your Balance: **${bal_usdt:.2f} USDT** ({balance:.4f} TON)\n\n"
+        f"[E:💲] Price: **${price_usdt:.2f} USDT**\n"
+        f"[E:🪙] Your Balance: **${bal_usdt:.2f} USDT**\n\n"
         f"[E:✅] Press confirm to proceed.\n"
         f"[E:🔒] **You will only be charged once you receive the login OTP.**\n"
         f"If cancelled before OTP arrives, no charge.",
@@ -514,20 +511,19 @@ def cancel_otp_cb(call):
 
 @bot.message_handler(func=lambda m: m.text and "My Profile" in m.text)
 def my_profile(message):
-    uid        = message.from_user.id
+    uid          = message.from_user.id
     db.add_user(uid, message.from_user.username or "")
     balance_ton  = db.get_balance(uid)
     balance_usdt = price_feed.ton_to_usdt(balance_ton)
     purchases    = db.get_user_purchase_count(uid)
-    price_ton    = db.get_price_ton()
-    price_usdt   = price_feed.ton_to_usdt(price_ton)
+    price_usdt   = db.get_price_usdt()
     ton_rate     = price_feed.get_ton_price_usdt()
     send(uid,
         f"[E:👤] **Your Profile**\n\n"
         f"[E:🤖] Telegram ID: {uid}\n"
-        f"[E:💲] Balance: **${balance_usdt:.2f} USDT** ({balance_ton:.4f} TON)\n"
+        f"[E:💲] Balance: **${balance_usdt:.2f} USDT**\n"
         f"[E:📈] Total Purchases: **{purchases}**\n"
-        f"[E:💲] Account Price: **${price_usdt:.2f} USDT** ({price_ton} TON)\n"
+        f"[E:💲] Account Price: **${price_usdt:.2f} USDT**\n"
         f"[E:🪙] TON Rate: **1 TON = ${ton_rate:.4f} USDT**"
     )
 
@@ -571,8 +567,7 @@ def back_to_menu(message):
 def stock_info(message):
     if message.from_user.id != ADMIN_ID:
         return
-    price_ton    = db.get_price_ton()
-    price_usdt   = price_feed.ton_to_usdt(price_ton)
+    price_usdt   = db.get_price_usdt()
     revenue_ton  = db.get_total_revenue()
     revenue_usdt = price_feed.ton_to_usdt(revenue_ton)
     ton_rate     = price_feed.get_ton_price_usdt()
@@ -580,9 +575,9 @@ def stock_info(message):
         f"[E:📈] **Stock Info**\n\n"
         f"[E:✅] Available: **{db.get_available_count()}**\n"
         f"🔴 Sold: **{db.get_sold_count()}**\n"
-        f"[E:💲] Total Revenue: **${revenue_usdt:.2f} USDT** ({revenue_ton:.4f} TON)\n"
-        f"[E:💲] Current Price: **${price_usdt:.2f} USDT** ({price_ton} TON)\n"
-        f"[E:🪙] Live TON Rate: **${ ton_rate:.4f} USDT**"
+        f"[E:💲] Total Revenue: **${revenue_usdt:.2f} USDT**\n"
+        f"[E:💲] Current Price: **${price_usdt:.2f} USDT**\n"
+        f"[E:🪙] Live TON Rate: **${ton_rate:.4f} USDT**"
     )
 
 
