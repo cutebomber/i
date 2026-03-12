@@ -933,41 +933,43 @@ def handle_text(message):
             send(message.chat.id, f"[E:⚠️] User {target_uid} not found in database.")
             return
         uname = f"@{user['username']}" if user['username'] else "no username"
+        bal_usdt = price_feed.ton_to_usdt(user['balance_ton'])
         set_state(uid, "add_bal_amount", data=target_uid)
         send(message.chat.id,
             f"[E:🎁] **Add Balance — Step 2**\n\n"
             f"[E:👤] User: {target_uid} {uname}\n"
-            f"[E:🪙] Current Balance: **{user['balance_ton']:.3f} TON**\n\n"
-            f"How much TON to add? (e.g. 1.5)"
+            f"[E:💲] Current Balance: **${bal_usdt:.2f} USDT**\n\n"
+            f"How much USDT to add? (e.g. 5)"
         )
 
     elif state == "add_bal_amount" and uid == ADMIN_ID:
         target_uid = get_state_data(uid)
         try:
-            amount = float(text)
-            if amount <= 0:
+            amount_usdt = float(text)
+            if amount_usdt <= 0:
                 raise ValueError
-            db.add_balance(target_uid, amount)
-            new_bal = db.get_balance(target_uid)
-            new_bal_usdt = price_feed.ton_to_usdt(new_bal)
+            amount_ton = price_feed.usdt_to_ton(amount_usdt)
+            db.add_balance(target_uid, amount_ton)
+            new_bal_ton  = db.get_balance(target_uid)
+            new_bal_usdt = price_feed.ton_to_usdt(new_bal_ton)
             clear_state(uid)
             send(message.chat.id,
                 f"[E:✅] **Balance Added!**\n\n"
                 f"[E:👤] User: {target_uid}\n"
-                f"[E:🪙] Added: +{amount} TON\n"
-                f"[E:💲] New Balance: **${new_bal_usdt:.2f} USDT** ({new_bal:.4f} TON)",
+                f"[E:💲] Added: +${amount_usdt:.2f} USDT\n"
+                f"[E:💲] New Balance: **${new_bal_usdt:.2f} USDT**",
                 reply_markup=admin_menu()
             )
             try:
                 send(target_uid,
                     f"[E:🎁] **Balance Added by Admin!**\n\n"
-                    f"[E:🪙] Added: **+{amount} TON**\n"
-                    f"[E:💲] New Balance: **${new_bal_usdt:.2f} USDT** ({new_bal:.4f} TON)"
+                    f"[E:💲] Added: **+${amount_usdt:.2f} USDT**\n"
+                    f"[E:💲] New Balance: **${new_bal_usdt:.2f} USDT**"
                 )
             except Exception:
                 pass
         except ValueError:
-            send(message.chat.id, f"[E:⚠️] Invalid amount. Send a positive number like 1.5")
+            send(message.chat.id, f"[E:⚠️] Invalid amount. Send a positive number like 5")
 
     # ── Buyer: Tonkeeper TON amount input ─────────────────
     elif state == "topup_ton":
@@ -1058,18 +1060,20 @@ def handle_text(message):
             bot.send_message(uid, "❌ Could not save review. Please try again.")
             return
 
-        # Reward buyer with 0.5 TON
+        # Reward buyer with 0.5 TON equivalent
         db.add_balance(uid, REVIEW_REWARD)
         db.mark_review_rewarded(uid)
         new_bal = db.get_balance(uid)
+        new_bal_usdt = price_feed.ton_to_usdt(new_bal)
+        reward_usdt = price_feed.ton_to_usdt(REVIEW_REWARD)
         clear_state(uid)
 
         # Thank buyer
         bot.send_message(
             uid,
             f"<tg-emoji emoji-id=\"6106981506754814207\">✅</tg-emoji> <b>Review Submitted! Thank you!</b>\n\n"
-            f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> <b>+{REVIEW_REWARD} TON</b> has been added to your balance.\n"
-            f"<tg-emoji emoji-id=\"6107061783988542265\">💲</tg-emoji> New Balance: <b>{new_bal:.3f} TON</b>",
+            f"<tg-emoji emoji-id=\"6107061783988542265\">💲</tg-emoji> <b>+${reward_usdt:.2f} USDT</b> has been added to your balance.\n"
+            f"<tg-emoji emoji-id=\"6107061783988542265\">💲</tg-emoji> New Balance: <b>${new_bal_usdt:.2f} USDT</b>",
             parse_mode="HTML",
             reply_markup=main_menu(uid)
         )
