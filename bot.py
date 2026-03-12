@@ -294,15 +294,14 @@ def cmd_start(message):
 # ─────────────────────── ADD BALANCE ──────────────────
 
 def add_balance_choose_kb():
-    """Two payment options: Tonkeeper (TON) and OxaPay (card/crypto)."""
+    """Two payment options shown as coin choices."""
     m = types.InlineKeyboardMarkup()
-    m.add(types.InlineKeyboardButton("💎 Tonkeeper  (TON)",           callback_data="topup_tonkeeper"))
-    m.add(types.InlineKeyboardButton("💳 OxaPay  (Card / Crypto)",   callback_data="topup_oxapay"))
+    m.add(types.InlineKeyboardButton("💎 TON  (via Tonkeeper)",      callback_data="topup_tonkeeper"))
+    m.add(types.InlineKeyboardButton("💵 USDT  (via OxaPay)",        callback_data="topup_oxapay"))
     return m
 
 
 def tonkeeper_payment_kb(uid: int, amount_ton: float):
-    """Tonkeeper deep link button + back."""
     nano    = int(amount_ton * 1_000_000_000)
     tk_link = f"https://app.tonkeeper.com/transfer/{BOT_WALLET}?amount={nano}&text={uid}"
     m = types.InlineKeyboardMarkup()
@@ -320,12 +319,10 @@ def add_balance(message):
     balance_usdt = price_feed.ton_to_usdt(balance_ton)
     bot.send_message(
         uid,
-        f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> <b>Add Balance</b>\n\n"
+        f"💰 <b>Add Balance</b>\n\n"
         f"💳 Your balance: <b>${balance_usdt:.2f} USDT</b>\n"
         f"💲 Account price: <b>${price_usdt:.2f} USDT</b>\n\n"
-        f"Choose your payment method:\n\n"
-        f"💎 <b>Tonkeeper</b> — Pay in TON directly\n"
-        f"💳 <b>OxaPay</b> — Pay in USDT via card, crypto & more",
+        f"Choose which coin to pay with:",
         parse_mode="HTML",
         reply_markup=add_balance_choose_kb()
     )
@@ -338,31 +335,32 @@ def topup_cb(call):
     uid = call.from_user.id
     val = call.data.split("_", 1)[1]
 
-    # ── Back to method selection ───────────────────────
+    # ── Back to coin selection ─────────────────────────
     if val == "back":
         price_usdt   = db.get_price_usdt()
         balance_ton  = db.get_balance(uid)
         balance_usdt = price_feed.ton_to_usdt(balance_ton)
         bot.edit_message_text(
-            f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> <b>Add Balance</b>\n\n"
+            f"💰 <b>Add Balance</b>\n\n"
             f"💳 Your balance: <b>${balance_usdt:.2f} USDT</b>\n"
             f"💲 Account price: <b>${price_usdt:.2f} USDT</b>\n\n"
-            f"Choose your payment method:\n\n"
-            f"💎 <b>Tonkeeper</b> — Pay in TON directly\n"
-            f"💳 <b>OxaPay</b> — Pay in USDT via card, crypto & more",
+            f"Choose which coin to pay with:",
             call.message.chat.id, call.message.message_id,
             parse_mode="HTML", reply_markup=add_balance_choose_kb()
         )
         bot.answer_callback_query(call.id)
         return
 
-    # ── Tonkeeper — ask amount ─────────────────────────
+    # ── TON via Tonkeeper — ask USDT amount ────────────
     if val == "tonkeeper":
+        ton_rate = price_feed.get_ton_price_usdt()
         set_state(uid, "topup_ton")
         bot.edit_message_text(
-            f"💎 <b>Tonkeeper Payment</b>\n\n"
-            f"How much TON do you want to deposit?\n"
-            f"Type the amount and send it. Example: <code>1.5</code>",
+            f"💎 <b>Pay with TON (Tonkeeper)</b>\n\n"
+            f"How much USDT do you want to deposit?\n"
+            f"We'll convert it to TON at the live rate.\n\n"
+            f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> Live rate: <b>1 TON = ${ton_rate:.4f} USDT</b>\n\n"
+            f"Type the USDT amount. Example: <code>5</code>",
             call.message.chat.id, call.message.message_id,
             parse_mode="HTML",
             reply_markup=types.InlineKeyboardMarkup().add(
@@ -372,14 +370,14 @@ def topup_cb(call):
         bot.answer_callback_query(call.id)
         return
 
-    # ── OxaPay — ask USD amount ────────────────────────
+    # ── USDT via OxaPay — ask USDT amount ─────────────
     if val == "oxapay":
         set_state(uid, "topup_oxapay")
         bot.edit_message_text(
-            f"💳 <b>OxaPay Payment</b>\n\n"
-            f"How much USD do you want to deposit?\n"
-            f"Type the amount and send it. Example: <code>5</code>\n\n"
-            f"<i>Minimum: $1 — Supports USDT, BTC, ETH, card & more.</i>",
+            f"💵 <b>Pay with USDT (OxaPay)</b>\n\n"
+            f"How much USDT do you want to deposit?\n\n"
+            f"Type the USDT amount. Example: <code>5</code>\n\n"
+            f"<i>Supports USDT, BTC, ETH, card & more.</i>",
             call.message.chat.id, call.message.message_id,
             parse_mode="HTML",
             reply_markup=types.InlineKeyboardMarkup().add(
@@ -971,24 +969,27 @@ def handle_text(message):
         except ValueError:
             send(message.chat.id, f"[E:⚠️] Invalid amount. Send a positive number like 5")
 
-    # ── Buyer: Tonkeeper TON amount input ─────────────────
+    # ── Buyer: Tonkeeper — USDT amount input → convert to TON ─────
     elif state == "topup_ton":
         try:
-            amount = float(text)
-            if amount <= 0:
+            amount_usdt = float(text)
+            if amount_usdt < 1:
                 raise ValueError
             clear_state(uid)
-            nano    = int(amount * 1_000_000_000)
-            tk_link = f"https://app.tonkeeper.com/transfer/{BOT_WALLET}?amount={nano}&text={uid}"
-            tk_kb   = types.InlineKeyboardMarkup()
+            amount_ton = price_feed.usdt_to_ton(amount_usdt)
+            ton_rate   = price_feed.get_ton_price_usdt()
+            nano       = int(amount_ton * 1_000_000_000)
+            tk_link    = f"https://app.tonkeeper.com/transfer/{BOT_WALLET}?amount={nano}&text={uid}"
+            tk_kb      = types.InlineKeyboardMarkup()
             tk_kb.add(types.InlineKeyboardButton("💎 Open Tonkeeper & Pay", url=tk_link))
             tk_kb.add(types.InlineKeyboardButton("🔙 Back", callback_data="topup_back"))
             bot.send_message(
                 uid,
-                f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> <b>Tonkeeper Payment — {amount:.3f} TON</b>\n\n"
-                f"Tap the button below. Your wallet address, amount and memo\n"
-                f"are all pre-filled — just open and confirm.\n\n"
-                f"<tg-emoji emoji-id=\"5951665890079544884\">☑️</tg-emoji> Amount: <b>{amount:.3f} TON</b>\n"
+                f"💎 <b>Tonkeeper Payment</b>\n\n"
+                f"💵 You're depositing: <b>${amount_usdt:.2f} USDT</b>\n"
+                f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> TON to send: <b>{amount_ton:.4f} TON</b>\n"
+                f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> Rate: <b>1 TON = ${ton_rate:.4f} USDT</b>\n\n"
+                f"Tap below — amount & memo are pre-filled.\n"
                 f"<tg-emoji emoji-id=\"6106902616795519273\">🔒</tg-emoji> Memo: <code>{uid}</code>\n\n"
                 f"<tg-emoji emoji-id=\"5900104897885376843\">⏱</tg-emoji> Credited automatically within ~1 minute.",
                 parse_mode="HTML",
@@ -997,7 +998,7 @@ def handle_text(message):
         except ValueError:
             bot.send_message(
                 uid,
-                f"<tg-emoji emoji-id=\"6106898459267177284\">⚠️</tg-emoji> Invalid amount. Send a number like <code>2.5</code>",
+                f"<tg-emoji emoji-id=\"6106898459267177284\">⚠️</tg-emoji> Minimum is $1. Send a number like <code>5</code>",
                 parse_mode="HTML"
             )
         return
@@ -1019,9 +1020,8 @@ def handle_text(message):
                 ton_equiv = price_feed.usdt_to_ton(amount_usd)
                 bot.send_message(
                     uid,
-                    f"💳 <b>OxaPay Invoice Created!</b>\n\n"
+                    f"💵 <b>OxaPay Invoice Created!</b>\n\n"
                     f"💵 Amount: <b>${amount_usd:.2f} USDT</b>\n"
-                    f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> You will receive: <b>~{ton_equiv:.4f} TON</b>\n"
                     f"<tg-emoji emoji-id=\"5900104897885376843\">⏱</tg-emoji> Expires in: <b>30 minutes</b>\n\n"
                     f"Tap below to complete payment. Your balance will be\n"
                     f"credited <b>automatically</b> within ~20 seconds of payment.",
