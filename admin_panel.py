@@ -257,13 +257,13 @@ def stock_delete(aid):
 def users():
     all_users = q("""SELECT u.*,COUNT(t.id) as pc FROM users u
         LEFT JOIN transactions t ON t.user_id=u.telegram_id AND t.type='purchase'
-        GROUP BY u.telegram_id ORDER BY u.created_at DESC""")
+        GROUP BY u.telegram_id ORDER BY u.joined_at DESC""")
     rows = "".join(f"""<tr>
         <td class="mono">{u["telegram_id"]}</td>
         <td>{"@"+u["username"] if u["username"] else '<span style="color:var(--muted)">—</span>'}</td>
         <td class="mono green">{float(u["balance_ton"] or 0):.4f}</td>
         <td><span class="badge bb">{u["pc"]}</span></td>
-        <td class="mono" style="font-size:11px;color:var(--muted)">{u["created_at"] or "—"}</td>
+        <td class="mono" style="font-size:11px;color:var(--muted)">{u["joined_at"] or "—"}</td>
         <td><button class="btn bg2" style="padding:5px 10px;font-size:11px"
           onclick="openCredit({u['telegram_id']}, '{"@"+u["username"] if u["username"] else u["telegram_id"]}')">+ Credit</button></td>
     </tr>""" for u in all_users) or '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No users yet</td></tr>'
