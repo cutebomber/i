@@ -62,7 +62,7 @@ def init_db():
             paid_at     TEXT
         );
     """)
-    cur.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('price_ton', '0.1')")
+    cur.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('price_usdt', '5.0')")
     con.commit()
     con.close()
 
@@ -326,18 +326,34 @@ def get_total_revenue() -> float:
 
 # ─── SETTINGS ─────────────────────────────────────────
 
-def get_price_ton() -> float:
+def get_price_usdt() -> float:
+    """Price per account in USDT."""
     con = _con()
-    row = con.execute("SELECT value FROM settings WHERE key = 'price_ton'").fetchone()
+    row = con.execute("SELECT value FROM settings WHERE key = 'price_usdt'").fetchone()
     con.close()
-    return float(row["value"]) if row else 0.1
+    return float(row["value"]) if row else 5.0
 
 
-def set_price_ton(price: float):
+def set_price_usdt(price: float):
     con = _con()
-    con.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('price_ton', ?)", (str(price),))
+    con.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('price_usdt', ?)", (str(price),))
     con.commit()
     con.close()
+
+
+def get_price_ton() -> float:
+    """
+    Price per account expressed in TON.
+    Calculated from the USDT price and the TON/USD rate in config.
+    """
+    from config import TON_PRICE_USD
+    return round(get_price_usdt() / TON_PRICE_USD, 6)
+
+
+def set_price_ton(price_ton: float):
+    """Legacy setter — converts TON back to USDT and saves."""
+    from config import TON_PRICE_USD
+    set_price_usdt(round(price_ton * TON_PRICE_USD, 4))
 
 
 # ─── STOCK MANAGEMENT ────────────────────────────────
