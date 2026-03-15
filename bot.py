@@ -44,6 +44,7 @@ EMOJI_IDS = {
     "👛": "6161281300809391112",   # wallet
     "🔷": "5397982951369622729",   # fragment verified
     "💠": "5339300332168036242",   # tonkeeper
+    "🟦": "5927169041595634481",   # oxapay
 }
 
 def build(text: str):
@@ -1049,14 +1050,13 @@ def handle_text(message):
                 ox_kb.add(types.InlineKeyboardButton("💳 Pay Now with OxaPay", url=pay_link))
                 ox_kb.add(types.InlineKeyboardButton("🔙 Back", callback_data="topup_back"))
                 ton_equiv = price_feed.usdt_to_ton(amount_usd)
-                bot.send_message(
+                send(
                     uid,
-                    f"💵 <b>OxaPay Invoice Created!</b>\n\n"
-                    f"💵 Amount: <b>${amount_usd:.2f} USDT</b>\n"
-                    f"<tg-emoji emoji-id=\"5900104897885376843\">⏱</tg-emoji> Expires in: <b>30 minutes</b>\n\n"
+                    f"[E:🟦] **OxaPay Invoice Created!**\n\n"
+                    f"[E:💲] Amount: **${amount_usd:.2f} USDT**\n"
+                    f"[E:⏱] Expires in: **30 minutes**\n\n"
                     f"Tap below to complete payment. Your balance will be\n"
-                    f"credited <b>automatically</b> within ~20 seconds of payment.",
-                    parse_mode="HTML",
+                    f"credited **automatically** within ~20 seconds of payment.",
                     reply_markup=ox_kb
                 )
             else:
