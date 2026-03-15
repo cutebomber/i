@@ -1022,8 +1022,7 @@ def handle_text(message):
                 f"[E:💲] You're depositing: **${amount_usdt:.2f} USDT**\n"
                 f"[E:🪙] TON to send: **{amount_ton:.4f} TON**\n"
                 f"[E:💲] Rate: **1 TON = ${ton_rate:.4f} USDT**\n\n"
-                f"Tap below — amount & memo are pre-filled.\n"
-                f"[E:🔒] Memo: `{uid}`\n\n"
+                f"Tap below — amount & memo are pre-filled.\n\n"
                 f"[E:⏱] Credited automatically within ~1 minute.",
                 reply_markup=tk_kb
             )
