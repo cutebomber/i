@@ -936,7 +936,7 @@ def handle_text(message):
         failed = 0
         bot.send_message(message.chat.id, f"📤 Sending to {len(all_users_list)} users...")
         # Build once with premium emojis — reuse plain+entities for all users
-        plain, entities = build(f"[E:📢] **Message from Shop**\n\n{text}")
+        plain, entities = build(text)
         for user in all_users_list:
             try:
                 bot.send_message(
