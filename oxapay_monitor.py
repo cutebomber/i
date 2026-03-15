@@ -100,24 +100,21 @@ async def check_invoice(client: httpx.AsyncClient, invoice: dict, bot) -> bool:
         db.add_balance(telegram_id, ton_amount)
         db.record_transaction(telegram_id, ton_amount, f"oxapay_{track_id}")
 
-        price_ton    = db.get_price_ton()
         new_balance  = db.get_balance(telegram_id)
-        can_buy      = int(new_balance // price_ton) if price_ton > 0 else 0
         new_bal_usdt = price_feed.ton_to_usdt(new_balance)
 
         logger.info(f"OxaPay: credited {ton_amount:.4f} TON to {telegram_id} (${amount_usd} USDT)")
 
         try:
-            bot.send_message(
-                telegram_id,
-                f"✅ <b>Balance Added via OxaPay!</b>\n\n"
-                f"💵 Paid: <b>${amount_usd:.2f} USDT</b>\n"
-                f"🪙 Credited: <b>{ton_amount:.4f} TON</b>\n"
-                f"💳 New Balance: <b>${new_bal_usdt:.2f} USDT</b> ({new_balance:.4f} TON)\n"
-                f"🛒 You can buy: <b>{can_buy} account(s)</b>\n\n"
-                f"Use 🛒 <b>Buy Account</b> to purchase!",
-                parse_mode="HTML"
+            from bot import send, build
+            plain, entities = build(
+                f"[E:✅] **Balance Added via OxaPay!**\n\n"
+                f"[E:💲] Paid: **${amount_usd:.2f} USDT**\n"
+                f"[E:🪙] Credited: **{ton_amount:.4f} TON**\n"
+                f"[E:👛] New Balance: **${new_bal_usdt:.2f} USDT**\n\n"
+                f"Use 🛒 **Buy Account** to purchase!"
             )
+            bot.send_message(telegram_id, plain, entities=entities if entities else None)
         except Exception as e:
             logger.warning(f"Could not notify user {telegram_id}: {e}")
 
