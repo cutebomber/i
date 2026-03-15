@@ -51,6 +51,7 @@ async def create_invoice_async(telegram_id: int, amount_usd: float) -> dict:
         if data.get("result") == 100:
             track_id = data.get("trackId", "")
             pay_link = data.get("payLink", "")
+            logger.info(f"OxaPay invoice created: track_id={track_id} amount=${amount_usd} user={telegram_id}")
             db.create_oxapay_invoice(telegram_id, track_id, amount_usd)
             return {"success": True, "pay_link": pay_link, "track_id": track_id}
         else:
@@ -81,6 +82,8 @@ async def check_invoice(client: httpx.AsyncClient, invoice: dict, bot) -> bool:
 
     result = data.get("result")
     status = data.get("status", "")
+
+    logger.info(f"OxaPay inquiry [{track_id}]: result={result} status={status} full={data}")
 
     # result 100 + status "Paid" = confirmed
     if result == 100 and status == "Paid":
