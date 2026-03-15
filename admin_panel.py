@@ -5,11 +5,25 @@ Access: http://YOUR_VPS_IP:8080
 """
 
 from flask import Flask, render_template_string, request, redirect, url_for, session, jsonify, flash
-import sqlite3, os, functools
+import sqlite3, os, functools, httpx
 from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.urandom(32)
+
+# -- Live TON rate ----------------------------------------
+_ton_rate = 1.4  # fallback
+
+def get_ton_rate():
+    global _ton_rate
+    try:
+        r = httpx.get("https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd", timeout=4)
+        _ton_rate = r.json()["the-open-network"]["usd"]
+    except Exception:
+        pass
+    return _ton_rate
+
+def ton_to_usdt(ton): return round(float(ton or 0) * get_ton_rate(), 2)
 
 DB_PATH        = os.path.join(os.path.dirname(__file__), "bot_data.db")
 PANEL_PASSWORD = "admin123"   # ← CHANGE THIS
@@ -157,7 +171,7 @@ def dashboard():
     total_stock   = q("SELECT COUNT(*) as c FROM accounts WHERE status='available'", one=True)["c"]
     total_sold    = q("SELECT COUNT(*) as c FROM accounts WHERE status='sold'", one=True)["c"]
     rev_row       = q("SELECT SUM(amount_ton) as s FROM transactions WHERE type='purchase'", one=True)
-    total_rev     = float(rev_row["s"] or 0)
+    total_rev     = ton_to_usdt(float(rev_row["s"] or 0))
     price_row     = q("SELECT value FROM settings WHERE key='price_usdt'", one=True)
     price_usdt    = float(price_row["value"]) if price_row else 5.0
     recent_orders = q("""SELECT t.*,u.username FROM transactions t
@@ -165,7 +179,7 @@ def dashboard():
         WHERE t.type='purchase' ORDER BY t.created_at DESC LIMIT 10""")
     rows = "".join(f"""<tr>
         <td>{"@"+r["username"] if r["username"] else r["user_id"]}</td>
-        <td class="mono">{float(r["amount_ton"] or 0):.4f} TON</td>
+        <td class="mono">${ton_to_usdt(r["amount_ton"]):.2f} USDT</td>
         <td class="mono" style="color:var(--muted);font-size:11px">{r["created_at"] or "—"}</td>
         <td><span class="badge bg">Completed</span></td>
     </tr>""" for r in recent_orders) or '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px">No orders yet</td></tr>'
@@ -175,7 +189,7 @@ def dashboard():
       <div class="card"><div class="card-label">Available Stock</div><div class="card-value blue">{total_stock}</div></div>
       <div class="card"><div class="card-label">Total Sold</div><div class="card-value green">{total_sold}</div></div>
       <div class="card"><div class="card-label">Total Users</div><div class="card-value">{total_users}</div></div>
-      <div class="card"><div class="card-label">Revenue (TON)</div><div class="card-value orange">{total_rev:.2f}</div></div>
+      <div class="card"><div class="card-label">Revenue (USDT)</div><div class="card-value orange">${total_rev:.2f}</div></div>
       <div class="card"><div class="card-label">Account Price</div><div class="card-value green">${price_usdt:.2f}</div></div>
     </div>
     <div class="tw"><div class="th"><h2>Recent Orders</h2></div>
@@ -261,7 +275,7 @@ def users():
     rows = "".join(f"""<tr>
         <td class="mono">{u["telegram_id"]}</td>
         <td>{"@"+u["username"] if u["username"] else '<span style="color:var(--muted)">—</span>'}</td>
-        <td class="mono green">{float(u["balance_ton"] or 0):.4f}</td>
+        <td class="mono green">{ton_to_usdt(u["balance_ton"]):.2f}</td>
         <td><span class="badge bb">{u["pc"]}</span></td>
         <td class="mono" style="font-size:11px;color:var(--muted)">{u["joined_at"] or "—"}</td>
         <td><button class="btn bg2" style="padding:5px 10px;font-size:11px"
@@ -270,7 +284,7 @@ def users():
     content = f"""{flash_html()}
     <div class="ph"><div class="ph-left"><h1>Users</h1><p>{len(all_users)} registered users.</p></div></div>
     <div class="tw"><table>
-      <tr><th>Telegram ID</th><th>Username</th><th>Balance (TON)</th><th>Purchases</th><th>Joined</th><th>Action</th></tr>
+      <tr><th>Telegram ID</th><th>Username</th><th>Balance (USDT)</th><th>Purchases</th><th>Joined</th><th>Action</th></tr>
       {rows}
     </table></div>
     <div class="mo" id="creditM"><div class="mbox">
@@ -278,7 +292,7 @@ def users():
       <p id="cUser" style="color:var(--muted);margin-bottom:16px;font-size:13px"></p>
       <form method="POST" action="/users/credit">
         <input type="hidden" name="telegram_id" id="cId">
-        <div class="fg"><label>Amount (TON)</label><input type="number" name="amount" step="0.01" min="0.01" placeholder="e.g. 3.5" required></div>
+        <div class="fg"><label>Amount (USDT)</label><input type="number" name="amount" step="0.01" min="0.01" placeholder="e.g. 5" required></div>
         <div class="mf">
           <button type="button" class="btn bgh" onclick="document.getElementById('creditM').classList.remove('open')">Cancel</button>
           <button type="submit" class="btn bg2">Add Balance</button>
@@ -304,9 +318,10 @@ def users_credit():
         return redirect("/users")
     try:
         con = get_db()
-        con.execute("UPDATE users SET balance_ton=balance_ton+? WHERE telegram_id=?", (amt, tid))
+        amt_ton = amt / get_ton_rate()
+        con.execute("UPDATE users SET balance_ton=balance_ton+? WHERE telegram_id=?", (amt_ton, tid))
         con.commit(); con.close()
-        add_flash("success", f"Added {amt} TON to user {tid}.")
+        add_flash("success", f"Added ${amt:.2f} USDT to user {tid}.")
     except Exception as e:
         add_flash("error", str(e))
     return redirect("/users")
@@ -321,7 +336,7 @@ def orders():
         <td>{"@"+o["username"] if o["username"] else o["user_id"]}</td>
         <td><span class="badge {"br" if o["type"]=="purchase" else "bg"}">{o["type"].title()}</span></td>
         <td class="mono" style="color:{"var(--danger)" if o["type"]=="purchase" else "var(--accent2)"}">
-          {"−" if o["type"]=="purchase" else "+"}{float(o["amount_ton"] or 0):.4f} TON</td>
+          {"−" if o["type"]=="purchase" else "+"}{ton_to_usdt(o["amount_ton"]):.2f} USDT</td>
         <td class="mono" style="font-size:11px;color:var(--muted)">{o["created_at"] or "—"}</td>
     </tr>""" for o in all_orders) or '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">No transactions yet</td></tr>'
     content = f"""{flash_html()}
