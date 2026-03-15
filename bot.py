@@ -1042,14 +1042,17 @@ def handle_text(message):
             if amount_usd < 1:
                 raise ValueError
             clear_state(uid)
-            # Create the invoice via OxaPay API
-            result = run_async(oxapay_monitor.create_invoice_async(uid, amount_usd))
+            try:
+                result = run_async(oxapay_monitor.create_invoice_async(uid, amount_usd))
+            except Exception as api_err:
+                logger.error(f"OxaPay create_invoice run_async error: {api_err}")
+                send(uid, f"[E:⚠️] Failed to create invoice: `{api_err}`\n\nPlease try again or use Tonkeeper.")
+                return
             if result.get("success"):
                 pay_link = result["pay_link"]
                 ox_kb = types.InlineKeyboardMarkup()
                 ox_kb.add(types.InlineKeyboardButton("💳 Pay Now with OxaPay", url=pay_link))
                 ox_kb.add(types.InlineKeyboardButton("🔙 Back", callback_data="topup_back"))
-                ton_equiv = price_feed.usdt_to_ton(amount_usd)
                 send(
                     uid,
                     f"[E:🟦] **OxaPay Invoice Created!**\n\n"
@@ -1060,19 +1063,9 @@ def handle_text(message):
                     reply_markup=ox_kb
                 )
             else:
-                bot.send_message(
-                    uid,
-                    f"❌ <b>Could not create OxaPay invoice.</b>\n\n"
-                    f"<code>{result.get('error', 'Unknown error')}</code>\n\n"
-                    f"Please try again or use Tonkeeper.",
-                    parse_mode="HTML"
-                )
+                send(uid, f"[E:⚠️] Could not create OxaPay invoice.\n\n`{result.get('error', 'Unknown error')}`\n\nPlease try again or use Tonkeeper.")
         except ValueError:
-            bot.send_message(
-                uid,
-                f"<tg-emoji emoji-id=\"6106898459267177284\">⚠️</tg-emoji> Minimum is $1. Send a number like <code>5</code>",
-                parse_mode="HTML"
-            )
+            send(uid, f"[E:⚠️] Minimum is $1. Send a number like `5`")
         return
 
     # ── Buyer: writing review text ─────────────────────
