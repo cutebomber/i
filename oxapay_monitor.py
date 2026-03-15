@@ -86,7 +86,7 @@ async def check_invoice(client: httpx.AsyncClient, invoice: dict, bot) -> bool:
     logger.info(f"OxaPay inquiry [{track_id}]: result={result} status={status} full={data}")
 
     # result 100 + status "Paid" = confirmed
-    if result == 100 and status == "Paid":
+    if result == 100 and status.lower() == "paid":
         paid_invoice = db.mark_oxapay_paid(track_id)
         if not paid_invoice:
             # Already processed (race guard)
@@ -124,7 +124,7 @@ async def check_invoice(client: httpx.AsyncClient, invoice: dict, bot) -> bool:
         return True
 
     # Mark expired invoices so we stop polling them
-    if status in ("Expired", "Failed", "Cancelled"):
+    if status.lower() in ("expired", "failed", "cancelled"):
         db.expire_oxapay_invoice(track_id)
         logger.info(f"OxaPay invoice {track_id} marked {status}")
 
