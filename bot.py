@@ -43,6 +43,7 @@ EMOJI_IDS = {
     "💳": "5255713220546538619",   # card
     "👛": "6161281300809391112",   # wallet
     "🔷": "5397982951369622729",   # fragment verified
+    "💠": "5339300332168036242",   # tonkeeper
 }
 
 def build(text: str):
@@ -1014,16 +1015,15 @@ def handle_text(message):
             tk_kb      = types.InlineKeyboardMarkup()
             tk_kb.add(types.InlineKeyboardButton("💎 Open Tonkeeper & Pay", url=tk_link))
             tk_kb.add(types.InlineKeyboardButton("🔙 Back", callback_data="topup_back"))
-            bot.send_message(
+            send(
                 uid,
-                f"💎 <b>Tonkeeper Payment</b>\n\n"
-                f"💵 You're depositing: <b>${amount_usdt:.2f} USDT</b>\n"
-                f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> TON to send: <b>{amount_ton:.4f} TON</b>\n"
-                f"<tg-emoji emoji-id=\"6106898347598027963\">🪙</tg-emoji> Rate: <b>1 TON = ${ton_rate:.4f} USDT</b>\n\n"
+                f"[E:💠] **Tonkeeper Payment**\n\n"
+                f"[E:💲] You're depositing: **${amount_usdt:.2f} USDT**\n"
+                f"[E:🪙] TON to send: **{amount_ton:.4f} TON**\n"
+                f"[E:💲] Rate: **1 TON = ${ton_rate:.4f} USDT**\n\n"
                 f"Tap below — amount & memo are pre-filled.\n"
-                f"<tg-emoji emoji-id=\"6106902616795519273\">🔒</tg-emoji> Memo: <code>{uid}</code>\n\n"
-                f"<tg-emoji emoji-id=\"5900104897885376843\">⏱</tg-emoji> Credited automatically within ~1 minute.",
-                parse_mode="HTML",
+                f"[E:🔒] Memo: `{uid}`\n\n"
+                f"[E:⏱] Credited automatically within ~1 minute.",
                 reply_markup=tk_kb
             )
         except ValueError:
