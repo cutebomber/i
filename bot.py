@@ -691,8 +691,10 @@ def broadcast_start(message):
     set_state(message.from_user.id, "broadcast")
     send(message.chat.id,
         f"[E:🤖] **Broadcast Message**\n\n"
-        f"Send the message you want to broadcast to **all users**.\n"
-        f"Plain text only in broadcast — no special formatting needed.\n\n"
+        f"Send your message to broadcast to all users.\n\n"
+        f"[E:☑️] **Text only** — just type and send\n"
+        f"[E:☑️] **Image + caption** — send a photo with caption\n\n"
+        f"You can use `[E:emoji]` for custom emojis.\n\n"
         f"Send /cancel to abort."
     )
 
@@ -825,6 +827,14 @@ def stock_close_cb(call):
 
 
 
+@bot.message_handler(content_types=["photo"])
+def handle_photo(message):
+    uid   = message.from_user.id
+    state = get_state(uid)
+    if state == "broadcast" and uid == ADMIN_ID:
+        handle_text(message)
+
+
 @bot.message_handler(func=lambda m: True)
 def handle_text(message):
     uid   = message.from_user.id
@@ -934,19 +944,40 @@ def handle_text(message):
         all_users_list = db.get_all_users()
         sent = 0
         failed = 0
-        bot.send_message(message.chat.id, f"📤 Sending to {len(all_users_list)} users...")
-        # Build once with premium emojis — reuse plain+entities for all users
-        plain, entities = build(text)
-        for user in all_users_list:
-            try:
-                bot.send_message(
-                    user["telegram_id"],
-                    plain,
-                    entities=entities if entities else None
-                )
-                sent += 1
-            except Exception:
-                failed += 1
+        total = len(all_users_list)
+        bot.send_message(message.chat.id, f"📤 Sending to {total} users...")
+
+        # ── Photo broadcast ────────────────────────────
+        if message.photo:
+            file_id = message.photo[-1].file_id
+            caption = message.caption or ""
+            plain, entities = build(caption) if caption else (None, None)
+            for user in all_users_list:
+                try:
+                    bot.send_photo(
+                        user["telegram_id"],
+                        file_id,
+                        caption=plain or None,
+                        caption_entities=entities if entities else None
+                    )
+                    sent += 1
+                except Exception:
+                    failed += 1
+
+        # ── Text broadcast ─────────────────────────────
+        else:
+            plain, entities = build(text)
+            for user in all_users_list:
+                try:
+                    bot.send_message(
+                        user["telegram_id"],
+                        plain,
+                        entities=entities if entities else None
+                    )
+                    sent += 1
+                except Exception:
+                    failed += 1
+
         send(message.chat.id,
             f"[E:✅] **Broadcast Complete**\n\n"
             f"[E:📈] Sent: **{sent}**\n"
