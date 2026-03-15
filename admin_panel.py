@@ -120,10 +120,10 @@ def layout(content, page):
     )
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Fragment Admin</title>{CSS}</head><body>
+<title>ikycbot</title>{CSS}</head><body>
 <div class="layout">
 <aside class="sidebar">
-  <div class="logo">💎 Fragment<span>Admin</span><small>Bot Control Panel</small></div>
+  <div class="logo">💎 ikycbot<small>Bot Control Panel</small></div>
   <nav class="nav">{nav_html}</nav>
   <div class="sfooter"><a href="/logout">🚪 Logout</a></div>
 </aside>
@@ -151,7 +151,7 @@ def login():
         error = '<div class="alert alert-error">Wrong password.</div>'
     return f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Login</title>{CSS}</head><body>
 <div class="lw"><div class="lb">
-<h1>💎 Fragment<span style="color:var(--accent)">Admin</span></h1>
+<h1>💎 <span style="color:var(--accent)">ikycbot</span></h1>
 <p>Enter your admin password to continue.</p>
 {error}
 <form method="POST">
@@ -408,7 +408,7 @@ def settings():
     return layout(content, "settings")
 
 if __name__ == "__main__":
-    print(f"\n💎 Fragment Admin Panel")
+    print(f"\n💎 ikycbot Panel")
     print(f"   URL:      http://0.0.0.0:{PANEL_PORT}")
     print(f"   Password: {PANEL_PASSWORD}")
     print(f"   DB:       {DB_PATH}\n")
