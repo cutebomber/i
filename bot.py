@@ -42,6 +42,7 @@ EMOJI_IDS = {
     "☑️": "5951665890079544884",    # verified check
     "💳": "5255713220546538619",   # card
     "👛": "6161281300809391112",   # wallet
+    "🔷": "5397982951369622729",   # fragment verified
 }
 
 def build(text: str):
@@ -285,9 +286,9 @@ def cmd_start(message):
     send(uid,
         f"[E:👋] **Welcome, {name}!**\n\n"
         f"[E:🏠] **Fragment Account Shop**\n"
-        f"[E:💎] Buy verified Telegram Fragment accounts instantly.\n\n"
+        f"[E:🔷] Buy verified Telegram Fragment accounts instantly.\n\n"
         f"[E:💲] Price: **${price_usdt:.2f} USDT**\n"
-        f"[E:☑️] Instant delivery after payment\n"
+        f"[E:☑️] Instant delivery\n"
         f"[E:🔒] Safe & automated",
         reply_markup=main_menu(uid)
     )
